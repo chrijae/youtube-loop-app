@@ -5,10 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유튜브 구간 반복 & 북마크 🚀</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; max-width: 1200px; margin: auto; line-height: 1.6; background-color: #f9f9f9; }
-        .container { display: grid; grid-template-columns: 3fr 2fr; gap: 30px; }
-        .left-panel, .right-panel { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .flex-group { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; align-items: center; }
+        /* 상하 padding을 20px에서 10px로 축소 */
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 10px 20px; max-width: 1200px; margin: auto; line-height: 1.6; background-color: #f9f9f9; }
+        
+        /* 좌우 패널 사이의 gap도 살짝 축소 */
+        .container { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; }
+        
+        /* 패널 내부 상하좌우 여백을 20px에서 15px로 축소 */
+        .left-panel, .right-panel { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* 요소 사이의 하단 여백 축소 */
+        .flex-group { display: flex; gap: 10px; margin-bottom: 10px; width: 100%; align-items: center; }
         .flex-group input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin: 0; }
         
         button { padding: 10px 16px; background-color: #ff0000; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; white-space: nowrap; }
@@ -20,59 +27,61 @@
         .btn-gray { background-color: #6c757d; }
         .btn-gray:hover { background-color: #5a6268; }
         
-        #player { width: 100%; aspect-ratio: 16/9; background: #000; margin-bottom: 20px; border-radius: 8px; overflow: hidden; }
+        /* 플레이어 하단 여백 축소 */
+        #player { width: 100%; aspect-ratio: 16/9; background: #000; margin-bottom: 15px; border-radius: 8px; overflow: hidden; }
         
-        /* [수정됨] 중앙 정렬을 위해 justify-content: center 추가 */
-        .time-inputs { display: flex; justify-content: center; gap: 15px; align-items: center; margin-bottom: 15px; background: #f1f1f1; padding: 15px; border-radius: 8px; }
+        /* 반복 컨트롤 박스 안쪽 여백(padding) 15px -> 10px, 바깥 하단 여백 15px -> 10px 축소 */
+        .time-inputs { display: flex; justify-content: center; gap: 15px; align-items: center; margin-bottom: 10px; background: #f1f1f1; padding: 10px; border-radius: 8px; }
         .time-inputs input[type="text"] { width: 70px; text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .save-box { background: #e9f5ff; padding: 15px; border-radius: 8px; }
+        
+        /* 구간 저장 박스 안쪽 여백 15px -> 10px 축소 */
+        .save-box { background: #e9f5ff; padding: 10px; border-radius: 8px; }
 
         .right-panel { display: flex; flex-direction: column; max-height: 800px; }
-        .list-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .list-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         select { padding: 8px; border-radius: 4px; }
-        .csv-controls { display: flex; gap: 10px; margin-bottom: 15px; }
+        .csv-controls { display: flex; gap: 10px; margin-bottom: 10px; }
         
         #saved-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; border-top: 1px solid #eee; padding-top: 10px; }
-        .list-item { background: #f8f9fa; margin-bottom: 10px; padding: 12px; border-radius: 6px; border-left: 4px solid #0056b3; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 리스트 아이템의 상하 여백 및 패딩 살짝 축소하여 더 많이 보이게 함 */
+        .list-item { background: #f8f9fa; margin-bottom: 8px; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #0056b3; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .list-item:hover { background: #e2e6ea; }
         .item-info { flex-grow: 1; }
-        .item-title { font-weight: bold; margin-bottom: 5px; font-size: 0.95em; word-break: keep-all; }
+        .item-title { font-weight: bold; margin-bottom: 3px; font-size: 0.95em; word-break: keep-all; }
         .item-time { font-size: 0.85em; color: #555; }
         .delete-btn { background: #dc3545; padding: 5px 10px; font-size: 0.8em; margin-left: 10px; }
 
-        /* 도움말 모달 디자인 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; line-height: 1.6; }
         .modal-content h3 { margin-top: 0; color: #0056b3; }
         .close-modal { margin-top: 20px; width: 100%; }
 
-        /* [수정됨] 타이틀 영역을 꽉 차는 박스로 디자인 변경 */
+        /* 제목 배너 상하 여백 및 패딩 축소 */
         .header-area { 
             display: flex; justify-content: space-between; align-items: center; 
-            background: #2c3e50; /* 세련된 다크 네이비 배경 */
+            background: #2c3e50; 
             color: white; 
-            padding: 15px 30px; 
+            padding: 10px 30px; 
             border-radius: 8px; 
-            margin-bottom: 20px; 
+            margin-bottom: 15px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .header-area h2 { margin: 0; }
+        .header-area h2 { margin: 0; font-size: 1.3em; } /* 폰트 크기 살짝 조정 */
         
         @media (max-width: 800px) {
             .container { grid-template-columns: 1fr; }
-            .header-area { flex-direction: column; gap: 15px; text-align: center; }
+            .header-area { flex-direction: column; gap: 10px; text-align: center; padding: 15px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- [수정됨] 헤더 박스 -->
     <div class="header-area">
         <h2>유튜브 구간 반복 & 북마크 🚀</h2>
         <button class="btn-gray help-btn" onclick="toggleModal(true)">앱 사용 안내</button>
     </div>
 
-    <!-- 도움말 모달 창 -->
     <div class="modal-overlay" id="help-modal">
         <div class="modal-content">
             <h3>💡 앱 사용 및 데이터 보관 안내</h3>
@@ -87,7 +96,6 @@
     </div>
 
     <div class="container">
-        <!-- 좌측 패널 -->
         <div class="left-panel">
             <div class="flex-group">
                 <input type="text" id="yt-link" placeholder="유튜브 링크를 붙여넣으세요">
@@ -96,7 +104,6 @@
 
             <div id="player"></div>
 
-            <!-- [수정됨] 중앙 정렬된 시간 설정 영역 -->
             <div class="time-inputs">
                 <label>시작 <input type="text" id="start-time" placeholder="00:00" onclick="this.select()"></label>
                 <label>종료 <input type="text" id="end-time" placeholder="자동" onclick="this.select()"></label>
@@ -109,7 +116,6 @@
             </div>
         </div>
 
-        <!-- 우측 패널 -->
         <div class="right-panel">
             <div class="list-controls">
                 <h3>저장된 목록 (<span id="list-count">0</span>)</h3>
@@ -131,7 +137,6 @@
     </div>
 
     <script>
-        // 자바스크립트는 기존 로직과 100% 동일하게 유지됩니다.
         let player;
         let loopInterval;
         let currentVideoId = "";
