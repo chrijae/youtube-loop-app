@@ -5,16 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유튜브 구간 반복 & 북마크 🚀</title>
     <style>
-        /* 상하 padding을 20px에서 10px로 축소 */
         body { font-family: 'Malgun Gothic', sans-serif; padding: 10px 20px; max-width: 1200px; margin: auto; line-height: 1.6; background-color: #f9f9f9; }
-        
-        /* 좌우 패널 사이의 gap도 살짝 축소 */
         .container { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; }
-        
-        /* 패널 내부 상하좌우 여백을 20px에서 15px로 축소 */
         .left-panel, .right-panel { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        
-        /* 요소 사이의 하단 여백 축소 */
         .flex-group { display: flex; gap: 10px; margin-bottom: 10px; width: 100%; align-items: center; }
         .flex-group input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin: 0; }
         
@@ -27,14 +20,10 @@
         .btn-gray { background-color: #6c757d; }
         .btn-gray:hover { background-color: #5a6268; }
         
-        /* 플레이어 하단 여백 축소 */
         #player { width: 100%; aspect-ratio: 16/9; background: #000; margin-bottom: 15px; border-radius: 8px; overflow: hidden; }
         
-        /* 반복 컨트롤 박스 안쪽 여백(padding) 15px -> 10px, 바깥 하단 여백 15px -> 10px 축소 */
         .time-inputs { display: flex; justify-content: center; gap: 15px; align-items: center; margin-bottom: 10px; background: #f1f1f1; padding: 10px; border-radius: 8px; }
         .time-inputs input[type="text"] { width: 70px; text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        
-        /* 구간 저장 박스 안쪽 여백 15px -> 10px 축소 */
         .save-box { background: #e9f5ff; padding: 10px; border-radius: 8px; }
 
         .right-panel { display: flex; flex-direction: column; max-height: 800px; }
@@ -43,8 +32,6 @@
         .csv-controls { display: flex; gap: 10px; margin-bottom: 10px; }
         
         #saved-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; border-top: 1px solid #eee; padding-top: 10px; }
-        
-        /* 리스트 아이템의 상하 여백 및 패딩 살짝 축소하여 더 많이 보이게 함 */
         .list-item { background: #f8f9fa; margin-bottom: 8px; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #0056b3; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .list-item:hover { background: #e2e6ea; }
         .item-info { flex-grow: 1; }
@@ -57,17 +44,12 @@
         .modal-content h3 { margin-top: 0; color: #0056b3; }
         .close-modal { margin-top: 20px; width: 100%; }
 
-        /* 제목 배너 상하 여백 및 패딩 축소 */
         .header-area { 
             display: flex; justify-content: space-between; align-items: center; 
-            background: #2c3e50; 
-            color: white; 
-            padding: 10px 30px; 
-            border-radius: 8px; 
-            margin-bottom: 15px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: #2c3e50; color: white; padding: 10px 30px; 
+            border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .header-area h2 { margin: 0; font-size: 1.3em; } /* 폰트 크기 살짝 조정 */
+        .header-area h2 { margin: 0; font-size: 1.3em; }
         
         @media (max-width: 800px) {
             .container { grid-template-columns: 1fr; }
@@ -86,7 +68,7 @@
         <div class="modal-content">
             <h3>💡 앱 사용 및 데이터 보관 안내</h3>
             <p><strong>1. 데이터는 어디에 저장되나요?</strong><br>
-            이 앱은 서버나 구글 시트를 거치지 않고, 사용 중인 <b>브라우저의 '로컬 스토리지'</b>에 데이터를 직접 저장합니다. 개인정보 유출 위험이 없으며 속도가 매우 빠릅니다.</p>
+            이 앱은 서버나 구글 시트를 거치지 않고, 사용 중인 <b>브라우저의 '로컬 스토리지'</b>에 데이터를 직접 저장합니다.</p>
             <p><strong>2. 데이터를 백업하거나 공유하려면?</strong><br>
             목록 우측의 <b>[CSV 내보내기]</b> 버튼을 통해 엑셀 파일로 백업할 수 있습니다. 이 파일을 친구에게 보내고, 친구가 <b>[CSV 불러오기]</b>를 하면 완벽하게 동일한 목록을 공유할 수 있습니다.</p>
             <p><strong>3. 구간 설정 팁</strong><br>
@@ -137,6 +119,18 @@
     </div>
 
     <script>
+        // [새로운 기능] 모바일 기기 접속 감지 및 경고 알림창 띄우기
+        document.addEventListener('DOMContentLoaded', () => {
+            // 정규 표현식을 사용해 현재 브라우저의 User-Agent에 모바일 키워드가 있는지 검사
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // \n 은 알림창 안에서 줄바꿈을 해주는 특수 문자입니다.
+                alert("안내: 현재 이 앱은 PC 환경에 최적화되어 있습니다.\n\n스마트폰에서는 화면이 겹치거나 링크 입력이 원활하지 않을 수 있으니, 쾌적한 이용을 위해 가급적 PC 브라우저를 이용해 주세요. 💻");
+            }
+        });
+
+        // --- 기존 자바스크립트 로직 ---
         let player;
         let loopInterval;
         let currentVideoId = "";
