@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유튜브 구간 반복 & 북마크 🚀</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; max-width: 1200px; margin: auto; line-height: 1.6; background-color: #f9f9f9; }
+        .container { display: grid; grid-template-columns: 3fr 2fr; gap: 30px; }
+        
+        .left-panel, .right-panel { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* 플렉스박스를 이용해 입력창은 최대한 넓게, 버튼은 우측에 고정 */
+        .flex-group { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; align-items: center; }
+        .flex-group input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin: 0; }
+        
+        button { padding: 10px 16px; background-color: #ff0000; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; white-space: nowrap; }
+        button:hover { background-color: #cc0000; }
+        .btn-blue { background-color: #0056b3; }
+        .btn-blue:hover { background-color: #004494; }
+        .btn-green { background-color: #28a745; }
+        .btn-green:hover { background-color: #218838; }
+        
+        #player { width: 100%; aspect-ratio: 16/9; background: #000; margin-bottom: 20px; border-radius: 8px; overflow: hidden; }
+        
+        .time-inputs { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; background: #f1f1f1; padding: 15px; border-radius: 8px; }
+        .time-inputs input[type="text"] { width: 70px; text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .save-box { background: #e9f5ff; padding: 15px; border-radius: 8px; }
+
+        .right-panel { display: flex; flex-direction: column; max-height: 800px; }
+        .list-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        select { padding: 8px; border-radius: 4px; }
+        .csv-controls { display: flex; gap: 10px; margin-bottom: 15px; }
+        
+        #saved-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; border-top: 1px solid #eee; padding-top: 10px; }
+        .list-item { background: #f8f9fa; margin-bottom: 10px; padding: 12px; border-radius: 6px; border-left: 4px solid #0056b3; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .list-item:hover { background: #e2e6ea; }
+        .item-info { flex-grow: 1; }
+        .item-title { font-weight: bold; margin-bottom: 5px; font-size: 0.95em; word-break: keep-all; }
+        .item-time { font-size: 0.85em; color: #555; }
+        .delete-btn { background: #dc3545; padding: 5px 10px; font-size: 0.8em; margin-left: 10px; }
+        
+        @media (max-width: 800px) {
+            .container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <h2 style="text-align: center;">유튜브 구간 반복 & 북마크 🚀</h2>
+
+    <div class="container">
+        <!-- 좌측 패널: 영상 재생 및 제어 -->
+        <div class="left-panel">
+            <!-- 1. 영상 불러오기 그룹 (버튼 우측 배치) -->
+            <div class="flex-group">
+                <input type="text" id="yt-link" placeholder="유튜브 링크를 붙여넣으세요">
+                <button onclick="loadVideo()">영상 불러오기</button>
+            </div>
+
+            <div id="player"></div>
+
+            <div class="time-inputs">
+                <label>시작 <input type="text" id="start-time" placeholder="00:00" onclick="this.select()"></label>
+                <label>종료 <input type="text" id="end-time" placeholder="자동" onclick="this.select()"></label>
+                <button onclick="startLoop()">무한 반복 재생</button>
+            </div>
+
+            <!-- 2. 구간 저장하기 그룹 (버튼 우측, 제목창 최대화) -->
+            <div class="save-box flex-group" style="margin-bottom: 0;">
+                <input type="text" id="save-title" placeholder="저장할 제목 (미입력시 자동 설정)">
+                <button class="btn-blue" onclick="saveCurrentSegment()">구간 저장하기</button>
+            </div>
+        </div>
+
+        <!-- 우측 패널: 저장된 목록 및 CSV -->
+        <div class="right-panel">
+            <div class="list-controls">
+                <h3>저장된 목록 (<span id="list-count">0</span>)</h3>
+                <select id="sort-select" onchange="renderList()">
+                    <option value="oldest">저장한 시간순 (오래된순)</option>
+                    <option value="newest">최신순</option>
+                    <option value="title">제목순</option>
+                </select>
+            </div>
+
+            <div class="csv-controls">
+                <button class="btn-green" onclick="exportCSV()">CSV 내보내기</button>
+                <input type="file" id="csv-file" accept=".csv" style="display: none;" onchange="importCSV(event)">
+                <button class="btn-blue" onclick="document.getElementById('csv-file').click()">CSV 불러오기</button>
+            </div>
+
+            <ul id="saved-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        let player;
+        let loopInterval;
+        let currentVideoId = "";
+        let savedSegments = JSON.parse(localStorage.getItem('ytBookmarks')) || [];
+
+        let tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        let firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        function onYouTubeIframeAPIReady() { renderList(); }
+
+        function formatTime(totalSeconds) {
+            let m = Math.floor(totalSeconds / 60);
+            let s = Math.floor(totalSeconds % 60);
+            return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+        }
+
+        function parseTime(timeStr) {
+            let parts = timeStr.split(':');
+            if (parts.length === 2) return (parseInt(parts[0]) * 60) + parseInt(parts[1]);
+            if (parts.length === 1) return parseInt(parts[0]);
+            return 0;
+        }
+
+        function extractVideoID(url) {
+            let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            let match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        function loadVideo() {
+            let url = document.getElementById('yt-link').value;
+            let videoId = extractVideoID(url);
+            if (!videoId) { alert("올바른 링크를 입력해주세요."); return; }
+            initPlayer(videoId, "", ""); // 빈 값으로 넘겨 자동 세팅 유도
+        }
+
+        function initPlayer(videoId, startText, endText) {
+            currentVideoId = videoId;
+            document.getElementById('yt-link').value = `https://www.youtube.com/watch?v=${videoId}`;
+
+            if(player && player.destroy) {
+                player.destroy();
+                clearInterval(loopInterval);
+            }
+
+            player = new YT.Player('player', {
+                videoId: videoId,
+                playerVars: { 'playsinline': 1, 'origin': window.location.origin },
+                events: {
+                    'onReady': (event) => {
+                        let duration = player.getDuration();
+                        // 빈칸이면 00:00과 최종 시간으로 자동 세팅
+                        document.getElementById('start-time').value = startText || "00:00";
+                        document.getElementById('end-time').value = endText || formatTime(duration);
+                        
+                        let videoTitle = player.getVideoData().title || "알 수 없는 제목";
+                        document.getElementById('save-title').placeholder = videoTitle;
+                        
+                        if(endText) startLoop();
+                    }
+                }
+            });
+        }
+
+        // [핵심 로직] 빈칸 감지 및 자동 채우기 함수
+        function checkAndFillTimes() {
+            let startInput = document.getElementById('start-time');
+            let endInput = document.getElementById('end-time');
+            
+            if(startInput.value.trim() === "") startInput.value = "00:00";
+            if(endInput.value.trim() === "" && player) {
+                endInput.value = formatTime(player.getDuration());
+            }
+        }
+
+        function startLoop() {
+            if(!player || !player.seekTo) return alert("영상을 불러와주세요.");
+            
+            checkAndFillTimes(); // 빈칸이면 자동 채우기 실행
+
+            let startTime = parseTime(document.getElementById('start-time').value);
+            let endTime = parseTime(document.getElementById('end-time').value);
+            
+            if (isNaN(startTime) || isNaN(endTime) || startTime >= endTime) return alert("시간 설정이 잘못되었습니다.");
+
+            player.seekTo(startTime);
+            player.playVideo();
+
+            if (loopInterval) clearInterval(loopInterval);
+            loopInterval = setInterval(() => {
+                if (player.getCurrentTime() >= endTime) player.seekTo(startTime);
+            }, 500); 
+        }
+
+        function saveCurrentSegment() {
+            if(!currentVideoId) return alert("먼저 영상을 불러와주세요.");
+            
+            checkAndFillTimes(); // 빈칸이면 자동 채우기 실행
+            
+            let startTime = document.getElementById('start-time').value;
+            let endTime = document.getElementById('end-time').value;
+            let customTitle = document.getElementById('save-title').value;
+            
+            let videoTitle = player.getVideoData().title || "저장된 영상";
+            // 3. 제목 포맷 변경: 시간을 맨 뒤로 배치
+            let finalTitle = customTitle.trim() === "" ? `${videoTitle} [${startTime}~${endTime}]` : customTitle;
+
+            let newItem = {
+                id: Date.now(),
+                videoId: currentVideoId,
+                title: finalTitle,
+                startTime: startTime,
+                endTime: endTime,
+                timestamp: new Date().getTime()
+            };
+
+            savedSegments.push(newItem);
+            localStorage.setItem('ytBookmarks', JSON.stringify(savedSegments));
+            
+            document.getElementById('save-title').value = ""; 
+            renderList();
+            alert("성공적으로 저장되었습니다!");
+        }
+
+        function renderList() {
+            let listElement = document.getElementById('saved-list');
+            let sortType = document.getElementById('sort-select').value;
+            
+            listElement.innerHTML = "";
+            document.getElementById('list-count').innerText = savedSegments.length;
+
+            let sortedArray = [...savedSegments];
+            if (sortType === 'oldest') sortedArray.sort((a, b) => a.timestamp - b.timestamp);
+            else if (sortType === 'newest') sortedArray.sort((a, b) => b.timestamp - a.timestamp);
+            else if (sortType === 'title') sortedArray.sort((a, b) => a.title.localeCompare(b.title));
+
+            sortedArray.forEach(item => {
+                let li = document.createElement('li');
+                li.className = 'list-item';
+                li.innerHTML = `
+                    <div class="item-info" onclick="initPlayer('${item.videoId}', '${item.startTime}', '${item.endTime}')">
+                        <div class="item-title">${item.title}</div>
+                        <div class="item-time">⏱️ ${item.startTime} ~ ${item.endTime}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteItem(${item.id})">삭제</button>
+                `;
+                listElement.appendChild(li);
+            });
+        }
+
+        function deleteItem(id) {
+            if(confirm("정말 이 항목을 삭제하시겠습니까?")) {
+                savedSegments = savedSegments.filter(item => item.id !== id);
+                localStorage.setItem('ytBookmarks', JSON.stringify(savedSegments));
+                renderList();
+            }
+        }
+
+        // 4. CSV 내보내기 형식 깔끔하게 개선 (제목, 링크, 시작시간, 종료시간)
+        function exportCSV() {
+            if(savedSegments.length === 0) return alert("저장된 항목이 없습니다.");
+            
+            let csvContent = "\uFEFF"; 
+            csvContent += "Title,Link,StartTime,EndTime\n"; 
+            
+            savedSegments.forEach(item => {
+                let safeTitle = `"${item.title.replace(/"/g, '""')}"`;
+                let link = `https://youtu.be/${item.videoId}`; // 사용자가 쓰기 좋은 다이렉트 링크 생성
+                csvContent += `${safeTitle},${link},${item.startTime},${item.endTime}\n`;
+            });
+
+            let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "youtube_bookmarks.csv";
+            link.click();
+        }
+
+        // 5. 개선된 CSV 불러오기 (링크에서 영상 ID 추출 및 내부 ID 새로 부여)
+        function importCSV(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let text = e.target.result;
+                let lines = text.split('\n');
+                let newSegments = [];
+                
+                for(let i=1; i<lines.length; i++) {
+                    if(lines[i].trim() === "") continue;
+                    let cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                    
+                    if(cols && cols.length >= 4) {
+                        let link = cols[1];
+                        let videoId = extractVideoID(link); // 링크에서 다시 ID 뽑아내기
+                        
+                        if(videoId) {
+                            newSegments.push({
+                                id: Date.now() + i, // 새로운 고유 ID 부여
+                                videoId: videoId,
+                                title: cols[0].replace(/^"|"$/g, '').replace(/""/g, '"'),
+                                startTime: cols[2],
+                                endTime: cols[3],
+                                timestamp: Date.now() + i // 새로운 타임스탬프 부여
+                            });
+                        }
+                    }
+                }
+
+                if(newSegments.length > 0) {
+                    savedSegments = savedSegments.concat(newSegments); // 기존 데이터에 병합
+                    localStorage.setItem('ytBookmarks', JSON.stringify(savedSegments));
+                    renderList();
+                    alert(`${newSegments.length}개의 항목을 성공적으로 불러왔습니다!`);
+                } else {
+                    alert("지원하지 않는 형식이거나 데이터가 없습니다.");
+                }
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
