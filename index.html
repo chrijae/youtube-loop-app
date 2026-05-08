@@ -5,23 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유튜브 구간 반복 & 북마크 🚀</title>
     <style>
+        /* [수정됨] 브라우저의 크기 계산 오차를 없애는 마법의 코드 */
+        * { box-sizing: border-box; }
+        
         body { font-family: 'Malgun Gothic', sans-serif; padding: 10px 20px; max-width: 1200px; margin: auto; line-height: 1.6; background-color: #f9f9f9; }
         
         .container { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; align-items: start; }
         
         .left-panel { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
-        /* 우측 패널 레이아웃 */
         .right-panel { 
             background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: flex; flex-direction: column; 
-            /* JS를 통해 max-height가 왼쪽 패널과 동일하게 조절됩니다 */
+            position: sticky; top: 20px; 
+            /* JS를 통해 명시적인 height가 왼쪽 패널과 1:1로 부여됩니다 */
         }
         
-        #saved-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; border-top: 1px solid #eee; padding-top: 10px; }
+        /* [수정됨] min-height: 0을 추가하여 목록이 창을 뚫고 나가는 현상 방지 */
+        #saved-list { 
+            list-style: none; padding: 0; margin: 0; 
+            overflow-y: auto; flex-grow: 1; 
+            border-top: 1px solid #eee; padding-top: 10px;
+            min-height: 0; 
+        }
 
         .flex-group { display: flex; gap: 10px; margin-bottom: 10px; width: 100%; align-items: center; }
-        .flex-group input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin: 0; }
+        .flex-group input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin: 0; }
         
         button { padding: 10px 16px; background-color: #ff0000; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; white-space: nowrap; }
         button:hover { background-color: #cc0000; }
@@ -34,7 +43,6 @@
         
         #player { width: 100%; aspect-ratio: 16/9; background: #000; margin-bottom: 15px; border-radius: 8px; transition: transform 0.2s; }
         
-        /* 좌우 반전 클래스 */
         .mirrored { transform: scaleX(-1); }
         
         .time-inputs { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #f1f1f1; padding: 10px 15px; border-radius: 8px; }
@@ -72,7 +80,7 @@
             .container { grid-template-columns: 1fr; }
             .header-area { flex-direction: column; gap: 10px; text-align: center; padding: 15px; }
             .time-inputs { flex-direction: column; gap: 15px; }
-            .right-panel { max-height: 500px !important; } 
+            .right-panel { height: auto !important; position: static; max-height: 500px; } 
         }
     </style>
 </head>
@@ -146,20 +154,20 @@
     </div>
 
     <script>
-        // 모바일 접속 감지
         document.addEventListener('DOMContentLoaded', () => {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             if (isMobile) {
                 alert("안내: 현재 이 앱은 PC 환경에 최적화되어 있습니다.\n\n스마트폰에서는 화면이 겹치거나 링크 입력이 원활하지 않을 수 있으니, 쾌적한 이용을 위해 가급적 PC 브라우저를 이용해 주세요. 💻");
             }
             
-            // 좌측 패널의 높이를 감지하여 우측 패널의 최대 높이를 동기화시킵니다.
+            // [수정됨] 좌측 패널의 높이를 정확히 측정하여 우측 패널의 '높이'를 강제 동기화
             const leftPanel = document.getElementById('left-panel');
             const rightPanel = document.getElementById('right-panel');
             const resizeObserver = new ResizeObserver(entries => {
                 for (let entry of entries) {
                     if (window.innerWidth > 800) {
-                        rightPanel.style.maxHeight = entry.target.offsetHeight + 'px';
+                        // max-height가 아닌 정확한 height를 부여하여 1:1 일치
+                        rightPanel.style.height = entry.target.offsetHeight + 'px';
                     }
                 }
             });
@@ -176,7 +184,6 @@
             document.getElementById('help-modal').style.display = show ? 'flex' : 'none';
         }
 
-        // 좌우 반전 기능
         function toggleMirror() {
             const playerElement = document.getElementById('player');
             isMirrored = !isMirrored;
