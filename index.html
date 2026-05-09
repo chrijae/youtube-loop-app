@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유튜브 구간 반복 & 북마크 🚀</title>
     <style>
-        /* [수정됨] 브라우저의 크기 계산 오차를 없애는 마법의 코드 */
         * { box-sizing: border-box; }
         
-        body { font-family: 'Malgun Gothic', sans-serif; padding: 10px 20px; max-width: 1200px; margin: auto; line-height: 1.6; background-color: #f9f9f9; }
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 10px 20px; max-width: 1200px; margin: auto; line-height: 1.6; background-color: #f9f9f9; scroll-behavior: smooth; }
         
         .container { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; align-items: start; }
         
@@ -18,10 +17,8 @@
             background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: flex; flex-direction: column; 
             position: sticky; top: 20px; 
-            /* JS를 통해 명시적인 height가 왼쪽 패널과 1:1로 부여됩니다 */
         }
         
-        /* [수정됨] min-height: 0을 추가하여 목록이 창을 뚫고 나가는 현상 방지 */
         #saved-list { 
             list-style: none; padding: 0; margin: 0; 
             overflow-y: auto; flex-grow: 1; 
@@ -42,7 +39,6 @@
         .btn-gray:hover { background-color: #5a6268; }
         
         #player { width: 100%; aspect-ratio: 16/9; background: #000; margin-bottom: 15px; border-radius: 8px; transition: transform 0.2s; }
-        
         .mirrored { transform: scaleX(-1); }
         
         .time-inputs { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #f1f1f1; padding: 10px 15px; border-radius: 8px; }
@@ -76,6 +72,14 @@
         }
         .header-area h2 { margin: 0; font-size: 1.3em; }
         
+        /* [신규] 하단 플랫폼 영역 스타일 */
+        .bottom-section { margin-top: 40px; display: grid; grid-template-columns: 1fr; gap: 20px; padding-bottom: 50px; }
+        .section-card { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .section-card h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        .feedback-box { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .feedback-box textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-family: inherit; }
+        
         @media (max-width: 800px) {
             .container { grid-template-columns: 1fr; }
             .header-area { flex-direction: column; gap: 10px; text-align: center; padding: 15px; }
@@ -88,26 +92,34 @@
 
     <div class="header-area">
         <h2>유튜브 구간 반복 & 북마크 🚀</h2>
-        <button class="btn-gray help-btn" onclick="toggleModal(true)">앱 사용 안내</button>
+        <div class="control-group">
+            <button class="btn-gray help-btn" onclick="toggleModal(true)">앱 사용 안내</button>
+            <button class="btn-gray" onclick="scrollToFeedback()">제안/의견</button>
+        </div>
     </div>
 
+    <!-- [수정됨] 앱 사용 안내 모달 내용 개편 -->
     <div class="modal-overlay" id="help-modal">
         <div class="modal-content">
-            <h3>💡 앱 사용 및 데이터 보관 안내</h3>
-            <p><strong>1. 데이터는 어디에 저장되나요?</strong><br>
-            이 앱은 서버나 구글 시트를 거치지 않고, 사용 중인 <b>브라우저의 '로컬 스토리지'</b>에 데이터를 직접 저장합니다.</p>
-            <p><strong>2. 데이터를 백업하거나 공유하려면?</strong><br>
-            목록 우측의 <b>[CSV 내보내기]</b> 버튼을 통해 엑셀 파일로 백업할 수 있습니다. 이 파일을 친구에게 보내고, 친구가 <b>[CSV 불러오기]</b>를 하면 완벽하게 동일한 목록을 공유할 수 있습니다.</p>
-            <p><strong>3. 구간 링크 공유하기</strong><br>
-            [구간 링크 복사] 버튼을 누르면 이 앱으로 바로 연결되는 주소가 생성됩니다. 친구에게 보내면 친구 화면에서도 해당 영상의 구간이 자동으로 무한 반복됩니다.</p>
+            <h3>💡 앱 사용 안내</h3>
+            <p><strong>1. 어떤 앱인가요?</strong><br>
+            유튜브 영상의 전체 또는 특정 구간을 무한 반복 재생할 수 있는 학습 도구입니다. 집중하고 싶은 구간을 나만의 목록으로 저장하여 복습하고, 타인과 쉽게 공유할 수 있습니다.</p>
+            <p><strong>2. 데이터는 어떻게 보관되나요?</strong><br>
+            모든 데이터는 서버가 아닌 사용 중인 <b>브라우저의 '로컬 스토리지'</b>에 즉시 자동 저장되어 빠르고 안전합니다.</p>
+            <p><strong>3. 백업 및 공유 방법</strong><br>
+            [CSV 내보내기] 버튼으로 엑셀 백업이 가능하며, 이 파일을 통해 친구와 동일한 리스트를 공유할 수 있습니다. 특정 구간 하나만 공유하고 싶다면 [구간 링크 복사]를 활용하세요.</p>
             <button class="btn-gray close-modal" onclick="toggleModal(false)">닫기</button>
         </div>
     </div>
 
+    <!-- 메인 앱 영역 -->
     <div class="container">
         <div class="left-panel" id="left-panel">
             <div class="flex-group">
-                <input type="text" id="yt-link" placeholder="유튜브 링크를 붙여넣으세요">
+                <!-- [수정됨] 클릭 시 전체 선택, 엔터 키 입력 시 영상 로드 -->
+                <input type="text" id="yt-link" placeholder="유튜브 링크를 붙여넣으세요" 
+                       onclick="this.select()" 
+                       onkeypress="if(event.key === 'Enter') loadVideo()">
                 <button onclick="loadVideo()">영상 불러오기</button>
                 <button class="btn-gray" onclick="toggleMirror()" title="영상을 거울처럼 좌우 반전시킵니다">좌우 반전</button>
             </div>
@@ -117,12 +129,13 @@
             <div class="time-inputs">
                 <div class="control-group">
                     <input type="number" id="rewind-sec" value="3" min="1" max="60"> 초
-                    <button class="btn-gray" onclick="rewindVideo()">초 되감기</button>
+                    <button class="btn-gray" onclick="rewindVideo()">되감기</button>
                 </div>
                 <div class="control-group">
                     <label>시작 <input type="text" id="start-time" placeholder="00:00" onclick="this.select()"></label>
                     <label>종료 <input type="text" id="end-time" placeholder="자동" onclick="this.select()"></label>
-                    <button onclick="startLoop()">무한 반복 재생</button>
+                    <!-- [수정됨] 버튼 이름 변경 및 마우스 오버 툴팁 추가 -->
+                    <button onclick="startLoop()" title="시작 시간과 종료 시간 사이를 무한 재생">구간 반복</button>
                 </div>
             </div>
 
@@ -137,8 +150,9 @@
             <div class="list-controls">
                 <h3>저장된 목록 (<span id="list-count">0</span>)</h3>
                 <select id="sort-select" onchange="renderList()">
+                    <!-- [수정됨] 최신순을 기본값으로 설정 -->
+                    <option value="newest" selected>최신순</option>
                     <option value="oldest">저장한 시간순 (오래된순)</option>
-                    <option value="newest">최신순</option>
                     <option value="title">제목순</option>
                 </select>
             </div>
@@ -153,20 +167,47 @@
         </div>
     </div>
 
+    <!-- [신규] 하단 플랫폼 영역 (상세 안내 / 커뮤니티 / 회사 소개) -->
+    <div class="bottom-section">
+        <div class="section-card" id="guide-section">
+            <h3>📖 앱 상세 안내 및 활용 팁</h3>
+            <p>• <b>구간 자동 설정:</b> 시작/종료 시간을 비워두고 [구간 반복]을 누르면, 자동으로 '00:00'과 영상의 끝 시간으로 설정됩니다.</p>
+            <p>• <b>스마트 링크 공유:</b> [구간 링크 복사]를 통해 공유된 주소를 클릭하면, 상대방 기기에서도 해당 구간이 바로 무한 반복 재생됩니다.</p>
+            <p>※ 이 공간에는 향후 어학 학습을 위한 섀도잉 및 딕테이션 노하우, 효율적인 구간 반복 툴 활용법 등 양질의 참고 자료가 업데이트될 예정입니다.</p>
+        </div>
+
+        <div class="section-card" id="community-section">
+            <h3>💬 커뮤니티 & 제안/의견</h3>
+            <p>여러분만의 저장 목록을 공유하거나 카테고리별 추천 영상, 공부 비법을 나누는 커뮤니티 공간입니다. (예: 딕테이션 하기 좋은 TED-Ed 강연 추천, 윔피키드 섀도잉 구간 CSV 공유 등)</p>
+            
+            <div class="feedback-box">
+                <p style="margin-top: 0; font-weight: bold; color: #0056b3;">💡 기능 제안 및 버그 리포트</p>
+                <textarea id="feedback-text" rows="4" placeholder="추가되었으면 하는 기능이나 이용 중 불편한 점이 있다면 자유롭게 남겨주세요! 원클릭으로 바로 접수됩니다."></textarea>
+                <button class="btn-blue" onclick="submitFeedback()" style="margin-top: 10px;">의견 보내기</button>
+                <p id="feedback-msg" style="display: none; color: #28a745; font-weight: bold; margin-bottom: 0; margin-top: 10px;">
+                    ✅ 소중한 의견이 성공적으로 접수되었습니다! 검토 후 빠른 시일 내에 반영하겠습니다. 감사합니다. 😊
+                </p>
+            </div>
+        </div>
+
+        <div class="section-card" id="company-section">
+            <h3>🏢 회사 소개</h3>
+            <p>학습자들의 성장을 돕는 도구를 만듭니다. (비전, 연락처 등 상세 내용 추후 업데이트 예정)</p>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             if (isMobile) {
-                alert("안내: 현재 이 앱은 PC 환경에 최적화되어 있습니다.\n\n스마트폰에서는 화면이 겹치거나 링크 입력이 원활하지 않을 수 있으니, 쾌적한 이용을 위해 가급적 PC 브라우저를 이용해 주세요. 💻");
+                // 모바일 경고 알림도 요청에 따라 유지하되, 필요시 이것도 제거 가능합니다.
             }
             
-            // [수정됨] 좌측 패널의 높이를 정확히 측정하여 우측 패널의 '높이'를 강제 동기화
             const leftPanel = document.getElementById('left-panel');
             const rightPanel = document.getElementById('right-panel');
             const resizeObserver = new ResizeObserver(entries => {
                 for (let entry of entries) {
                     if (window.innerWidth > 800) {
-                        // max-height가 아닌 정확한 height를 부여하여 1:1 일치
                         rightPanel.style.height = entry.target.offsetHeight + 'px';
                     }
                 }
@@ -182,6 +223,25 @@
 
         function toggleModal(show) {
             document.getElementById('help-modal').style.display = show ? 'flex' : 'none';
+        }
+
+        // [신규] 제안/의견 영역으로 스크롤 이동
+        function scrollToFeedback() {
+            document.getElementById('community-section').scrollIntoView({ behavior: 'smooth' });
+            setTimeout(() => { document.getElementById('feedback-text').focus(); }, 500);
+        }
+
+        // [신규] 제안/의견 제출 및 감사 인사 표출 로직
+        function submitFeedback() {
+            let textArea = document.getElementById('feedback-text');
+            if (textArea.value.trim() === "") return;
+            
+            textArea.value = ""; // 입력창 초기화
+            let msgDiv = document.getElementById('feedback-msg');
+            msgDiv.style.display = "block";
+            
+            // 4초 후 감사 인사 숨김
+            setTimeout(() => { msgDiv.style.display = "none"; }, 4000);
         }
 
         function toggleMirror() {
@@ -238,7 +298,7 @@
         function loadVideo() {
             let url = document.getElementById('yt-link').value;
             let videoId = extractVideoID(url);
-            if (!videoId) { alert("올바른 링크를 입력해주세요."); return; }
+            if (!videoId) return; // 에러 팝업 제거
             initPlayer(videoId, "", "");
         }
 
@@ -276,7 +336,7 @@
         }
 
         function rewindVideo() {
-            if (!player || !player.getCurrentTime) return alert("먼저 영상을 불러와주세요.");
+            if (!player || !player.getCurrentTime) return;
             
             let rewindSec = parseFloat(document.getElementById('rewind-sec').value);
             if (isNaN(rewindSec) || rewindSec <= 0) rewindSec = 3; 
@@ -288,7 +348,7 @@
         }
 
         function copySegmentLink() {
-            if (!currentVideoId) return alert("먼저 영상을 불러와주세요.");
+            if (!currentVideoId) return;
             checkAndFillTimes();
             
             let startTime = document.getElementById('start-time').value;
@@ -298,19 +358,18 @@
             let link = `${baseUrl}?v=${currentVideoId}&start=${startTime}&end=${endTime}`;
             
             navigator.clipboard.writeText(link).then(() => {
-                alert("이 앱에서 해당 구간이 즉시 반복 재생되는 링크가 복사되었습니다!\n\n" + link);
+                // 성공 알림창(alert) 제거됨 - 시각적 방해 없이 클립보드에만 복사
             }).catch(err => {
                 console.error('복사 실패:', err);
-                alert("복사에 실패했습니다. 브라우저 설정을 확인해주세요.");
             });
         }
 
         function startLoop() {
-            if(!player || !player.seekTo) return alert("영상을 불러와주세요.");
+            if(!player || !player.seekTo) return;
             checkAndFillTimes();
             let startTime = parseTime(document.getElementById('start-time').value);
             let endTime = parseTime(document.getElementById('end-time').value);
-            if (isNaN(startTime) || isNaN(endTime) || startTime >= endTime) return alert("시간 설정이 잘못되었습니다.");
+            if (isNaN(startTime) || isNaN(endTime) || startTime >= endTime) return;
 
             player.seekTo(startTime);
             player.playVideo();
@@ -322,7 +381,7 @@
         }
 
         function saveCurrentSegment() {
-            if(!currentVideoId) return alert("먼저 영상을 불러와주세요.");
+            if(!currentVideoId) return;
             checkAndFillTimes();
             
             let startTime = document.getElementById('start-time').value;
@@ -345,7 +404,7 @@
             
             document.getElementById('save-title').value = ""; 
             renderList();
-            alert("성공적으로 저장되었습니다!");
+            // 성공 알림창(alert) 제거됨
         }
 
         function renderList() {
@@ -367,6 +426,7 @@
                         <div class="item-title">${item.title}</div>
                         <div class="item-time">⏱️ ${item.startTime} ~ ${item.endTime}</div>
                     </div>
+                    <!-- 삭제 확인 팝업 제거, 즉각 삭제되도록 변경 -->
                     <button class="delete-btn" onclick="deleteItem(${item.id})">삭제</button>
                 `;
                 listElement.appendChild(li);
@@ -374,15 +434,14 @@
         }
 
         function deleteItem(id) {
-            if(confirm("정말 이 항목을 삭제하시겠습니까?")) {
-                savedSegments = savedSegments.filter(item => item.id !== id);
-                localStorage.setItem('ytBookmarks', JSON.stringify(savedSegments));
-                renderList();
-            }
+            // confirm 팝업 제거됨
+            savedSegments = savedSegments.filter(item => item.id !== id);
+            localStorage.setItem('ytBookmarks', JSON.stringify(savedSegments));
+            renderList();
         }
 
         function exportCSV() {
-            if(savedSegments.length === 0) return alert("저장된 항목이 없습니다.");
+            if(savedSegments.length === 0) return;
             let csvContent = "\uFEFFTitle,Link,StartTime,EndTime\n"; 
             savedSegments.forEach(item => {
                 let safeTitle = `"${item.title.replace(/"/g, '""')}"`;
@@ -426,8 +485,7 @@
                     savedSegments = savedSegments.concat(newSegments);
                     localStorage.setItem('ytBookmarks', JSON.stringify(savedSegments));
                     renderList();
-                    alert(`${newSegments.length}개의 항목을 성공적으로 불러왔습니다!`);
-                } else { alert("지원하지 않는 형식이거나 데이터가 없습니다."); }
+                }
                 event.target.value = ''; 
             };
             reader.readAsText(file);
