@@ -1,0 +1,36 @@
+name: Update CSV Board Data
+
+on:
+  repository_dispatch:
+    types: [new_csv_submission] # GAS에서 보낸 암구호와 일치해야 함
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Update data.json
+        run: |
+          # data.json 파일이 없으면 빈 배열로 생성
+          if [ ! -f data.json ]; then
+            echo "[]" > data.json
+          fi
+          
+          # 구글 폼에서 넘어온 데이터를 payload.json이라는 임시 파일로 저장 (한글 깨짐 방지)
+          cat << 'EOF' > payload.json
+          ${{ toJson(github.event.client_payload) }}
+          EOF
+          
+          # jq 명령어를 사용해 기존 data.json 배열 맨 뒤에 새 데이터를 쏙 집어넣음
+          jq '. + [input]' data.json payload.json > temp.json && mv temp.json data.json
+          rm payload.json
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git commit -m "자동 업데이트: 새로운 CSV 리스트가 등록되었습니다" || echo "No changes to commit"
+          git push
